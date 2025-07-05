@@ -1,0 +1,349 @@
+{
+  "name": "GitHub Issue Email Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -540,
+        -40
+      ],
+      "id": "303c7d11-cb6d-4f7f-bb5b-5af462fe07cb",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/Mohannath-KM/Weather_prediction/issues",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -120,
+        -40
+      ],
+      "id": "a2194eee-f173-4da1-ad6d-eedb63debd6c",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\n\n// If not initialized, set it manually once here:\nif (!data.lastIssueId) {\n  data.lastIssueId = 3204423010 ;  // 👈 Replace with the latest issue ID at that time\n}\n\nreturn [\n  {\n    json: {\n      lastId: data.lastIssueId\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        -20
+      ],
+      "id": "38a4c652-5cf0-484a-83e8-6ad531cd69d4",
+      "name": "Get Last ID"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9a0b2b1e-683e-422d-8bd2-6b488ad2b0ea",
+              "leftValue": "={{ $node[\"Pick First Issue\"].json[\"id\"] }}",
+              "rightValue": "={{ $node[\"Get Last ID\"].json[\"lastId\"] }}",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        360,
+        -20
+      ],
+      "id": "f818dc83-4f01-4354-83c3-171eff074d17",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "mohannathkm@gmail.com",
+        "toEmail": "mohannathkm360@gmail.com",
+        "subject": "New GitHub Issue",
+        "html": "=<div style=\"font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px; border-radius: 8px;\">\n  <div style=\"background-color: #212529; color: #fff; padding: 10px 15px; border-radius: 5px 5px 0 0;\">\n    🔔 <strong>New GitHub Issue Created</strong>\n  </div>\n  <div style=\"padding: 20px; color: #212529;\">\n    <p>Hello,</p>\n    <p>A new issue has been created in your repository.</p>\n\n    <p><strong>Issue Title:</strong> {{ $node[\"Pick First Issue\"].json[\"title\"] || \"Not available\" }}</p>\n    <p><strong>Created By:</strong> {{ $node[\"Pick First Issue\"].json[\"user\"][\"login\"] || \"Unknown\" }}</p>\n    <p><strong>Description:</strong> {{ $node[\"Pick First Issue\"].json[\"body\"] || \"No description provided.\" }}</p>\n    <p><strong>Created At:</strong> \n      {{ $node[\"Pick First Issue\"].json[\"created_at\"] \n         ? new Date($node[\"Pick First Issue\"].json[\"created_at\"]).toLocaleString(\"en-IN\", { timeZone: \"Asia/Kolkata\" }) \n         : \"Unknown\" \n      }}\n    </p>\n\n    <p><a href=\"{{ $node[\"Pick First Issue\"].json[\"html_url\"] }}\" style=\"color: #007bff;\">🔗 View Issue on GitHub</a></p>\n\n    <hr />\n    <small>This is an automated email from your GitHub Issue Alert Workflow (n8n).</small>\n  </div>\n</div>\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        -220
+      ],
+      "id": "0e3e16a6-73e3-42d8-8ece-1b259422e8ed",
+      "name": "Send email",
+      "webhookId": "0c1c77a7-198b-4592-89d9-94f889f74caa",
+      "credentials": {
+        "smtp": {
+          "id": "PIOzBTHmYLxWNXk2",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const data = $getWorkflowStaticData('global');\ndata.lastIssueId = $json[\"id\"];\n\nreturn {\n  json: {\n    lastIdSaved: data.lastIssueId\n  }\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -220
+      ],
+      "id": "171e7616-d69f-4f96-ab44-b7b4be36b9aa",
+      "name": "Set Last ID"
+    },
+    {
+      "parameters": {
+        "fromEmail": "mohannathkm@gmail.com",
+        "toEmail": "mohannathkm360@gmail.com",
+        "subject": "❌ IF Failed: No new issue",
+        "emailFormat": "text",
+        "text": "=lastId = {{$node[\"Get Last ID\"].json[\"lastId\"]}}\ncurrentId = {{$json[\"id\"]}}\nNo email sent.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        120
+      ],
+      "id": "69afe59d-e905-4a5c-94d9-a92ab59995f3",
+      "name": "Debug Email (IF False)",
+      "webhookId": "fe517efa-34c1-4d9e-8afb-04e21b74c4e2",
+      "credentials": {
+        "smtp": {
+          "id": "PIOzBTHmYLxWNXk2",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [ $input.all()[0] ];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        -220
+      ],
+      "id": "a721b4b2-4c43-4280-9e23-cab8980cfed4",
+      "name": "Pick First Issue"
+    },
+    {
+      "parameters": {
+        "content": "## Trigger Node\n**Issue raised in Github repository,** Cron node will continuously monitor the github repo on every time and start the execution",
+        "height": 520,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -600,
+        -240
+      ],
+      "id": "fca3e71e-4ea4-4eed-a9af-7ea0018c563b",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $getWorkflowStaticData('global');\ndata.lastIssueId = 137184588; // 👈 manually paste the latest issue ID\nreturn [{ json: { initialized: true, lastId: data.lastIssueId } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        140,
+        180
+      ],
+      "id": "94a636e9-b1a1-4859-88ee-6eef92b04ada",
+      "name": "Init Last ID"
+    },
+    {
+      "parameters": {
+        "content": "## Connect Github\n**Connection with Github** It connects your workflow to the GitHub REST API to get a list of issues from your repository.the HTTP Request node is used to fetch issues from your GitHub repository using the GitHub API.\n",
+        "height": 520,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -200,
+        -240
+      ],
+      "id": "fc4acdc8-f8a0-44dc-a4c6-4420171ed220",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Update lastId\n**LastId stored** When a email is send to user, Get LastId Node will update that issue's Id as the lastid and wont send again for that issue\n",
+        "height": 380
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        820,
+        -80
+      ],
+      "id": "6b85f534-b4c1-4bc2-863b-748e45c23dfc",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\n// Get timestamp from first input item\nconst inputTimestamp = items[0].json.timestamp;\n\nif (!inputTimestamp || isNaN(Date.parse(inputTimestamp))) {\n\treturn [\n\t\t{\n\t\t\tjson: {\n\t\t\t\terror: \"Invalid or missing timestamp\",\n\t\t\t\tinput: inputTimestamp\n\t\t\t}\n\t\t}\n\t];\n}\n\nconst utcDate = new Date(inputTimestamp);\n\n// Add 5.5 hours to convert UTC → IST\nconst istOffsetMs = 5.5 * 60 * 60 * 1000;\nconst istDate = new Date(utcDate.getTime() + istOffsetMs);\n\nconst readableIST = istDate.toLocaleString(\"en-IN\", { timeZone: \"Asia/Kolkata\" });\n\nreturn [\n\t{\n\t\tjson: {\n\t\t\toriginalUTC: utcDate.toISOString(),\n\t\t\tistTimestamp: istDate.toISOString(),\n\t\t\treadableIST,\n\t\t\thour: istDate.getHours(),\n\t\t\tminute: istDate.getMinutes(),\n\t\t\tsecond: istDate.getSeconds()\n\t\t}\n\t}\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -320,
+        300
+      ],
+      "id": "d1dac82c-597b-4f12-95ae-a8841317a9e5",
+      "name": "Set_TimeZone"
+    },
+    {
+      "parameters": {
+        "content": "## Comparison Node \n**Check Issue** The Check condition will check if the issue Id is new or old, if its new Id then it will allow to send a mail.",
+        "height": 520,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        320,
+        -240
+      ],
+      "id": "8ecf6739-d4b7-4793-ab03-5121299d72ae",
+      "name": "Sticky Note3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set_TimeZone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Pick First Issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Last ID": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Send email": {
+      "main": [
+        [
+          {
+            "node": "Set Last ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick First Issue": {
+      "main": [
+        [
+          {
+            "node": "Get Last ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Last ID": {
+      "main": [
+        []
+      ]
+    },
+    "Debug Email (IF False)": {
+      "main": [
+        []
+      ]
+    },
+    "Set_TimeZone": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "66b6f43a-4241-498c-8226-f9bd4b73560b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ef50a0be772ff49f6b98a042a5a337ea32f9a2bff7992381f41f6fe1f7dd3db"
+  },
+  "id": "mK4RLKXD9EoRVQyu",
+  "tags": []
+}
